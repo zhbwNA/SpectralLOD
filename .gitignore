@@ -1,0 +1,38 @@
+# MATLAB
+*.m~*
+*.asv
+*.mat
+*.fig
+*.mlx
+*.mlapp
+*.p
+*.mex*
+*.mexa64
+*.mexmaci64
+*.mexw64
+*.slxc
+*.slx~
+*.slprj/
+*.sldd
+*.sltx
+*.slxp
+*.slxc
+sccprj/
+slprj/
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.vscode/
+.idea/
+
+# MATLAB toolbox cache
+toolbox_cache-*.xml
+
+# Generated
+*.log
+*.aux
+*.out
