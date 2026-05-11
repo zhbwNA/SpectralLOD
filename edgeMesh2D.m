@@ -23,7 +23,7 @@ sortedLE = sort(localEdges, 2);
 NE = size(edge, 1);
 
 % Orientation
-isPos = (localEdges(:,1) <= localEdges(:,2)) == (localEdges(:,1) == edge(ie,1));
+isPos = (localEdges(:,1) == edge(ie,1));
 edgeSign = 2*double(isPos) - 1;
 
 edgeIdx  = reshape(ie,        NT, 3);
