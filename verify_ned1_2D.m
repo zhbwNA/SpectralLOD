@@ -7,7 +7,7 @@
 
 fprintf('========== 2D NE_1 Convergence Study ==========\n\n');
 
-u_exact = @(x,y) [y.*(1-y), zeros(size(x))];
+u_exact = @(x,y) deal(y.*(1-y), zeros(size(x)));
 curl_exact = @(x,y) 2*y - 1;
 f_rhs = @(x,y) 2 + y.*(1-y);
 
@@ -93,9 +93,9 @@ for q = 1:nQuad
     p2x=l(3)*g1(:,1)-l(1)*g3(:,1); p2y=l(3)*g1(:,2)-l(1)*g3(:,2);
     p3x=l(1)*g2(:,1)-l(2)*g1(:,1); p3y=l(1)*g2(:,2)-l(2)*g1(:,2);
 
-    c1=weight(q)*area.*(fx.*p1x+fy.*p1y);
-    c2=weight(q)*area.*(fx.*p2x+fy.*p2y);
-    c3=weight(q)*area.*(fx.*p3x+fy.*p3y);
+    c1=2*weight(q)*area.*(fx.*p1x+fy.*p1y);
+    c2=2*weight(q)*area.*(fx.*p2x+fy.*p2y);
+    c3=2*weight(q)*area.*(fx.*p3x+fy.*p3y);
 
     b = b + accumarray(eid(:,1), sig(:,1).*c1, [NE,1]);
     b = b + accumarray(eid(:,2), sig(:,2).*c2, [NE,1]);
@@ -153,7 +153,7 @@ for q = 1:nQuad
     l = lambda_q(q,:);
     px=l(1)*x1(:,1)+l(2)*x2(:,1)+l(3)*x3(:,1);
     py=l(1)*x1(:,2)+l(2)*x2(:,2)+l(3)*x3(:,2);
-    [uex, uey] = deal(u_exact(px, py));
+    [uex, uey] = u_exact(px, py);            % uses deal inside u_exact
     curlex = curl_exact(px, py);
 
     % Basis at this point
@@ -167,7 +167,7 @@ for q = 1:nQuad
     curlu_h = sig(:,1).*uv1.*c1 + sig(:,2).*uv2.*c2 + sig(:,3).*uv3.*c3;
 
     ex = uh_x - uex;  ey = uh_y - uey;  ec = curlu_h - curlex;
-    w_area = weight(q) * area;
+    w_area = 2 * weight(q) * area;         % physical element scaling
     errL2_sq = errL2_sq + sum(w_area .* (ex.^2 + ey.^2));
     errHcurl_sq = errHcurl_sq + sum(w_area .* (ex.^2 + ey.^2 + ec.^2));
 end

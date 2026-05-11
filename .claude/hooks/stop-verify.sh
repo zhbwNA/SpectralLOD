@@ -1,14 +1,39 @@
 #!/bin/bash
-# Stop hook — runs numerical verification after each Claude Code session.
-# Executes MATLAB-based numerical experiments to validate FEM/DDM code.
+# Stop hook — runs after each Claude Code session.
+# 1. Organizes generated files into subfolders (debug/, logs/)
+# 2. Runs MATLAB numerical verification on the codebase
 
 PROJECT_DIR="/d/Programs/Working Directory/MATLAB"
 LOG_DIR="$PROJECT_DIR/.claude/hooks/logs"
-mkdir -p "$LOG_DIR"
+DEBUG_DIR="$PROJECT_DIR/debug"
+mkdir -p "$LOG_DIR" "$DEBUG_DIR"
 
 LOGFILE="$LOG_DIR/verify_$(date +%Y%m%d_%H%M%S).log"
 
-echo "=== FEM/DDM Verification $(date) ===" | tee -a "$LOGFILE"
+echo "=== Post-Session Hook $(date) ===" | tee -a "$LOGFILE"
+
+# ---- Step 1: Organize generated files ------------------------------------
+echo "[ORGANIZE] Archiving debug files..." | tee -a "$LOGFILE"
+
+# Move standalone debug scripts to debug/
+for f in "$PROJECT_DIR"/debug_*.m; do
+    [ -f "$f" ] && mv "$f" "$DEBUG_DIR/" && echo "  Moved $(basename $f) → debug/" | tee -a "$LOGFILE"
+done
+
+# Move MATLAB crash/replay logs if any
+for f in "$PROJECT_DIR"/hs_error_pid*.log "$PROJECT_DIR"/replay_pid*.log "$PROJECT_DIR"/matlab_crash_dump.* 2>/dev/null; do
+    [ -f "$f" ] && mv "$f" "$LOG_DIR/" && echo "  Archived crash log $(basename $f)" | tee -a "$LOGFILE"
+done
+
+# Move Java core dumps if any
+for f in "$PROJECT_DIR"/core.* 2>/dev/null; do
+    [ -f "$f" ] && mv "$f" "$LOG_DIR/" && echo "  Archived core dump $(basename $f)" | tee -a "$LOGFILE"
+done
+
+echo "[ORGANIZE] Done." | tee -a "$LOGFILE"
+
+# ---- Step 2: Numerical verification --------------------------------------
+echo "[VERIFY] Checking MATLAB code..." | tee -a "$LOGFILE"
 
 # Collect all .m files (skip test.m if it's the placeholder)
 M_FILES=$(find "$PROJECT_DIR" -maxdepth 1 -name "*.m" ! -name "test.m" 2>/dev/null)

@@ -1,9 +1,17 @@
 {
+  "permissions": {
+    "allow": []
+  },
   "hooks": {
     "Stop": [
       {
-        "matcher": "",
-        "command": "cd \"/d/Programs/Working Directory/MATLAB/\" && bash .claude/hooks/stop-verify.sh"
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd \"/d/Programs/Working Directory/MATLAB/\" && bash .claude/hooks/stop-verify.sh"
+          }
+        ]
       }
     ]
   }

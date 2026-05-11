@@ -44,7 +44,7 @@ for q = 1:nQuad
     p3x = l(1)*g2(:,1) - l(2)*g1(:,1);  p3y = l(1)*g2(:,2) - l(2)*g1(:,2);
 
     % Dot products with signs
-    w = weight(q) * area;
+    w = 2 * weight(q) * area;               % quadrature on physical element
     m11 = w .* (p1x.^2 + p1y.^2);  % sig(1)^2 = 1
     m22 = w .* (p2x.^2 + p2y.^2);
     m33 = w .* (p3x.^2 + p3y.^2);
