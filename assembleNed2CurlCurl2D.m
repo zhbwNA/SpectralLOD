@@ -40,8 +40,8 @@ for k = 1:3                               % 3 local edges
     b0 = localEdgeBases(k);              % first basis (DOF 0)
     gIdx(:, b0)   = 2*(eid-1) + 1;
     gIdx(:, b0+1) = 2*(eid-1) + 2;
-    gSign(:, b0)   = sig;
-    gSign(:, b0+1) = sig;               % same sign for both edge DOFs
+    gSign(:, b0)   = sig;               % DOF 0: odd parity (NE_1-type)
+    gSign(:, b0+1) = 1;                  % DOF 1: even parity under reversal
 end
 % Interior DOFs
 for t = 1:NT

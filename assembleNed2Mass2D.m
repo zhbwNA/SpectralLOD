@@ -31,8 +31,8 @@ for k = 1:3
     b0 = localEdgeBases(k);
     gIdx(:, b0)   = 2*(eid-1) + 1;
     gIdx(:, b0+1) = 2*(eid-1) + 2;
-    gSign(:, b0)   = sig;
-    gSign(:, b0+1) = sig;
+    gSign(:, b0)   = sig;               % DOF 0: odd parity
+    gSign(:, b0+1) = 1;                  % DOF 1: even parity
 end
 for t = 1:NT
     gIdx(t, 7) = 2*NE + 2*(t-1) + 1;

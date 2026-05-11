@@ -67,7 +67,7 @@ gIdx=zeros(NT,nLocal); gSign=zeros(NT,nLocal);
 for kk=1:3
     col=localEdgeCols(kk); eidk=eidx(:,col); sigk=es(:,col); b0=localEdgeBases(kk);
     gIdx(:,b0)=2*(eidk-1)+1; gIdx(:,b0+1)=2*(eidk-1)+2;
-    gSign(:,b0)=sigk; gSign(:,b0+1)=sigk;
+    gSign(:,b0)=sigk; gSign(:,b0+1)=1;
 end
 for t=1:NT, gIdx(t,7)=2*NE+2*(t-1)+1; gIdx(t,8)=2*NE+2*(t-1)+2; end; gSign(:,7:8)=1;
 b=zeros(Ntot,1);
@@ -112,7 +112,7 @@ gIdx=zeros(NT,nLocal); gSign=zeros(NT,nLocal);
 for kk=1:3
     col=localEdgeCols(kk); eidk=eidx(:,col); sigk=es(:,col); b0=localEdgeBases(kk);
     gIdx(:,b0)=2*(eidk-1)+1; gIdx(:,b0+1)=2*(eidk-1)+2;
-    gSign(:,b0)=sigk; gSign(:,b0+1)=sigk;
+    gSign(:,b0)=sigk; gSign(:,b0+1)=1;
 end
 for t=1:NT, gIdx(t,7)=2*NE+2*(t-1)+1; gIdx(t,8)=2*NE+2*(t-1)+2; end; gSign(:,7:8)=1;
 eL2=0; eHc=0;
