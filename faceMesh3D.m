@@ -1,68 +1,67 @@
-function [face, faceIdx, faceSign] = faceMesh3D(elem)
-% FACEMESH3D  Build the global face list for a 3D tetrahedral mesh.
+function [face, faceIdx, faceTrans] = faceMesh3D(node, elem)
+% FACEMESH3D  Build global face list with orientation transformations.
 %
-%   [face, faceIdx, faceSign] = FACEMESH3D(elem)
+%   [face, faceIdx, faceTrans] = FACEMESH3D(node, elem)
 %
-%   faceSign is NT×4×4: faceSign(t,f,:,:) is a 2×2 matrix mapping
-%   global face DOFs to local face DOFs for face f of element t.
-%   If local ordering matches global, faceSign = eye(2).
-%   Otherwise it encodes the permutation.
+%   faceTrans{t,f} is a 2×2 matrix mapping global → local face DOFs.
+%   For assembly: A_global += T' * A_local(face_block) * T.
 
 NT = size(elem, 1);
 faceDefs = {[2,3,4], [1,4,3], [1,2,4], [1,3,2]};
 nLocal = 4;
 
-allFaces = zeros(NT * nLocal, 3);
+allFaces = zeros(NT*nLocal, 3);
 for k = 1:nLocal
-    rows = (k-1)*NT + (1:NT);
-    allFaces(rows, :) = elem(:, faceDefs{k});
+    allFaces((k-1)*NT+(1:NT), :) = elem(:, faceDefs{k});
 end
-
-sortedF = sort(allFaces, 2);
-[face, ~, ifa] = unique(sortedF, 'rows');
-NF = size(face, 1);
+[face, ~, ifa] = unique(sort(allFaces,2), 'rows');
 faceIdx = reshape(ifa, NT, nLocal);
 
-% Compute face orientation sign: for a face with local vertices (i,j,k)
-% and global sorted vertices (a,b,c) where a<b<c:
-%   Local bubble 1 = lam_i*lam_j*grad(lam_k)
-%   Local bubble 2 = lam_j*lam_k*grad(lam_i)
-%   Global bubble 1 = lam_a*lam_b*grad(lam_c)
-%   Global bubble 2 = lam_b*lam_c*grad(lam_a)
-% The transformation matrix T (2×2) maps global to local.
+faceTrans = cell(NT, nLocal);
 
-faceSign = zeros(NT, nLocal, 2, 2);
 for t = 1:NT
+    v = node(elem(t,:), :);
+    e12=v(2,:)-v(1,:); e13=v(3,:)-v(1,:); e14=v(4,:)-v(1,:);
+    J = [e12; e13; e14]';
+    invJ = inv(J);  % J^{-T} rows give ∇λ_2, ∇λ_3, ∇λ_4
+    g2=invJ(1,:); g3=invJ(2,:); g4=invJ(3,:); g1=-(g2+g3+g4);
+    Gphys = {g1, g2, g3, g4};
+
     for f = 1:nLocal
-        localVerts = elem(t, faceDefs{f});  % [i,j,k]
-        globalVerts = face(faceIdx(t,f), :); % [a,b,c] sorted
+        lfIdx = faceDefs{f};                   % local vertex indices [i,j,k]
+        localV = elem(t, lfIdx);               % global vertex numbers
+        globalV = face(faceIdx(t,f), :);       % sorted global [a,b,c]
 
-        % Find permutation: which global vertex maps to which local vertex
-        % and express local bubbles as combinations of global bubbles
-        [~, loc] = ismember(localVerts, globalVerts);
+        % Map global→local: which local index (1-4) matches each global vertex
+        % perm(1)=local index of sorted global vertex a, etc.
+        [~, perm] = ismember(globalV, localV); % perm maps global→local_index
 
-        % loc(1),loc(2),loc(3) are the positions of local i,j,k in global [a,b,c]
-        % The transformation depends on this permutation
-        % For now, use simplified sign: +1 if sorted face matches local order, else use
-        % the cyclic permutation of the global face
+        % Sample: use 5 points for robust least-squares fit
+        lam_vals = [1/3 1/3 1/3; 2/3 1/3 0; 0 2/3 1/3; 1/2 1/2 0; 1/4 1/2 1/4];
+        nPt = 5;
+        A_mat = zeros(6*nPt, 4); B_vec = zeros(6*nPt, 1);
+        row = 0;
 
-        % Actually, let me use a simpler approach: store the local-to-global
-        % bubble transformation. The two global bubbles span the same space
-        % as the two local bubbles. The transformation is a 2×2 matrix.
-
-        % For identity (i,j,k == a,b,c): [1 0; 0 1]
-        if all(loc == [1,2,3])
-            faceSign(t,f,:,:) = [1 0; 0 1];
-        % For (i,j,k) = (b,c,a): bubble1_local = lam_b*lam_c*grad(lam_a) = global_bubble2
-        %                        bubble2_local = lam_c*lam_a*grad(lam_b) = -(global_bubble1 - ...) hmm
-        % Let me just use a sign approximation
-        elseif all(loc == [2,3,1])
-            faceSign(t,f,:,:) = [0 1; -1 -1];
-        elseif all(loc == [3,1,2])
-            faceSign(t,f,:,:) = [-1 -1; 1 0];
-        else
-            faceSign(t,f,:,:) = [1 0; 0 1];  % default: identity (fallback)
+        for pt = 1:nPt
+            lam = zeros(1,4);
+            lam(lfIdx) = lam_vals(pt,:);
+            li=lam(lfIdx(1)); lj=lam(lfIdx(2)); lk=lam(lfIdx(3));
+            L1 = li*lj * Gphys{lfIdx(3)};  % ∇λ_k
+            L2 = lj*lk * Gphys{lfIdx(1)};  % ∇λ_i
+            la = lam(lfIdx(perm(1))); lb = lam(lfIdx(perm(2))); lc = lam(lfIdx(perm(3)));
+            G1 = la*lb * Gphys{lfIdx(perm(3))};
+            G2 = lb*lc * Gphys{lfIdx(perm(1))};
+            for comp = 1:3
+                row = row + 1;
+                A_mat(row,:) = [G1(comp), G2(comp), 0, 0];
+                B_vec(row) = L1(comp);
+                row = row + 1;
+                A_mat(row,:) = [0, 0, G1(comp), G2(comp)];
+                B_vec(row) = L2(comp);
+            end
         end
+        T_vec = pinv(A_mat) * B_vec;       % least-squares, robust to rank deficiency
+        faceTrans{t,f} = reshape(T_vec, [2,2])';
     end
 end
 end
