@@ -6,7 +6,7 @@
 - **Never use `-noFigureWindows`** unless the user explicitly asks to suppress all graphics. Experiment figures must display.
 - For running a script: `matlab -nosplash -nodesktop -batch "addpath(genpath('.')); run('script.m');"`
 - For running inline code: `matlab -nosplash -nodesktop -batch "addpath(genpath('.')); <code>;"`
-- Check for MATLAB at `C:\Program Files\MATLAB\R2024b\bin\matlab.exe` first, then fall back to `matlab` on PATH.
+- Check for MATLAB at `C:\Program Files\MATLAB\R2023a\bin\matlab.exe` first, then fall back to `matlab` on PATH.
 
 ## HPC Rules (Workstation: 48 cores, 549 GB RAM)
 
@@ -50,6 +50,13 @@ Before writing any new function:
 5. **Prefer extending** an existing function over creating a new one alongside it.
 6. **Do not reimplement** quadrature, basis gradients, or mesh topology — they already exist.
 
+## Research Subagents
+
+- **Use `math-searcher`** (`.claude/agents/math-searcher.md`) when a request needs internet literature search, article extraction, or implementation search for DDM, FEM, Helmholtz, or Maxwell topics.
+- Give `math-searcher` a bounded target: method names, equations/sections to extract, desired source type (paper, arXiv, code, documentation), and implementation language if relevant.
+- `math-searcher` should prioritize primary sources, return URLs/DOIs/arXiv IDs, extract only the requested formulas or algorithm details, and state how each result maps to this MATLAB codebase.
+- Do not treat internet summaries as implementation authority. Convert any extracted formulation into this project's notation and verify locally before coding.
+
 ## Git Commit Policy
 
 - **Commit when a phase is complete and verified** — After writing a component and its verification passes, commit immediately. Don't batch unrelated changes.
@@ -83,6 +90,9 @@ After completing a phase, organize new files into their appropriate folders. Cre
 | `src/Preconditioners/` | AS/OAS/ORAS preconditioner builders |
 | `verify/` | Numerical verification and test scripts (`verify_*.m`) |
 | `debug/` | One-off debugging and investigation scripts (`debug_*.m`) |
+| `.claude/agents/` | Project sub-agent definitions such as `math-searcher` |
+| `.claude/skills/` | Project Claude skills and migrated command helpers |
+| `.agents/skills/` | Project Codex skills and source-command wrappers |
 | `.claude/` | Claude Code configuration (skills, commands, hooks) |
 
 - **Test scripts always go in `verify/`** — e.g., `verify/verify_ned2_2D.m`.

@@ -6,11 +6,11 @@
 - **Never use `-noFigureWindows`** unless the user explicitly asks to suppress all graphics. Experiment figures must display.
 - For running a script: `matlab -nosplash -nodesktop -batch "addpath(genpath('.')); run('script.m');"`
 - For running inline code: `matlab -nosplash -nodesktop -batch "addpath(genpath('.')); <code>;"`
-- Check for MATLAB at `C:\Program Files\MATLAB\R2024b\bin\matlab.exe` first, then fall back to `matlab` on PATH.
+- Check for MATLAB at `C:\Program Files\MATLAB\R2023a\bin\matlab.exe` first, then fall back to `matlab` on PATH.
 
 ## HPC Rules (Workstation: 48 cores, 549 GB RAM)
 
-- **Ask permission before any test estimated to use >100 GB memory.** Estimate memory usage and present it before running.
+- **Ask permission before any test estimated to use >200 GB memory.** Estimate memory usage and present it before running.
 - **Use `parfor` for subdomain setup.** Start parpool before large runs: `parpool('local', feature('numcores'))`.
 - **Vectorize all assembly.** Use iFEM-style one-shot `sparse(ii, jj, ss, N, N)`.
 - **Avoid `containers.Map` with string keys for large meshes.** Use `ismember` on sorted edge lists or sparse hashing.
@@ -40,6 +40,43 @@ This project follows the sparse matrixlization style from Long Chen's iFEM packa
 - **One short doc line** — One comment line above the function stating the mathematical formula. No verbose docstrings.
 - **Use built-in `sparse` summation** — Duplicate `(i,j)` entries are automatically summed by `sparse`, so you can write the same `(i,j)` pair multiple times and get the accumulated value.
 
+## Numerical Coding Discipline
+
+These rules adapt the coding principles in `Karpathy's CLAUDE.md` to this FEM/DDM MATLAB project.
+
+### Think Before Coding
+
+- State the mathematical interpretation before implementation: PDE, weak form, finite element space, boundary conditions, and matrix/operator form.
+- If a paper, existing code path, or user instruction is ambiguous, ask before coding. Do not fill gaps with plausible numerical-analysis folklore.
+- Surface important tradeoffs early: paper fidelity vs. memory, direct LU vs. iterative solve, exact table parameters vs. scaled verification.
+- For DDM work, clarify the geometry and interface conditions before writing partition or solver code.
+
+### Simplicity First
+
+- Implement the smallest paper-faithful component that can be verified.
+- Do not add general frameworks, unused options, or speculative solver modes unless required by the paper or requested by the user.
+- Prefer extending existing assembly, mesh, quadrature, partition, and preconditioner utilities over adding parallel versions.
+- If a verification script becomes broad or slow, split focused checks from paper-scale reproduction instead of mixing them.
+
+### Surgical Changes
+
+- Touch only the files needed for the requested method, reproduction, or verification.
+- Preserve existing MATLAB style: vectorized iFEM-style assembly, one-shot `sparse(ii,jj,ss,...)`, camelCase utilities, short formula comments.
+- Do not refactor unrelated code while implementing a paper method. Mention unrelated issues separately.
+- Remove only unused code introduced by the current change; do not clean up pre-existing dead code unless asked.
+
+### Goal-Driven Verification
+
+For each implementation/reproduction phase, define success criteria before running:
+
+1. Formulation extraction -> verify: equations and algorithm steps cite the paper section/equation/table.
+2. Matrix translation -> verify: dimensions, DOF sets, restrictions, local operators, and boundary terms are explicit.
+3. Implementation -> verify: focused numerical checks pass on small meshes.
+4. Paper reproduction -> verify: generated table is compared directly against the paper table.
+5. Closeout -> verify: scripts live in `verify/`, debug helpers in `debug/`, and deviations from the paper are documented.
+
+A task is complete only when the result table answers the reproduction question: consistent with the paper, inconsistent, or blocked by a clearly stated limitation.
+
 ## Reuse-First Principle
 
 Before writing any new function:
@@ -49,6 +86,32 @@ Before writing any new function:
 4. **Use** existing basis evaluators (`lagrange2D`, `lagrange3D`, `nedelec1_2D`, `nedelec1_3D`, `nedelec2_2D`, `nedelec2_3D`).
 5. **Prefer extending** an existing function over creating a new one alongside it.
 6. **Do not reimplement** quadrature, basis gradients, or mesh topology — they already exist.
+
+## Research Subagents
+
+- **Use `math-searcher`** (`.claude/agents/math-searcher.md`) when a request needs internet literature search, article extraction, or implementation search for DDM, FEM, Helmholtz, or Maxwell topics.
+- Give `math-searcher` a bounded target: method names, equations/sections to extract, desired source type (paper, arXiv, code, documentation), and implementation language if relevant.
+- `math-searcher` should prioritize primary sources, return URLs/DOIs/arXiv IDs, extract only the requested formulas or algorithm details, and state how each result maps to this MATLAB codebase.
+- Do not treat internet summaries as implementation authority. Convert any extracted formulation into this project's notation and verify locally before coding.
+
+## Paper Reproduction Workflow
+
+Use this workflow whenever the user asks to **reproduce**, **replicate**, or **match** experiments from a paper.
+
+- **Goal first:** the goal is not to improve the method, tune aggressively, or make a new benchmark. The goal is to determine whether this repo can produce tables/figures consistent with the paper.
+- **Extract before coding:** use `math-searcher` when needed to find the paper, preprint, author implementation, supplementary material, or related code. Extract the exact algorithm, PDE, boundary conditions, discretization, stopping rules, reported metrics, and table/figure parameters.
+- **Translate to matrices:** use `math-translator` when needed to convert the paper formulation into this repo's matrix notation: global operator, local subdomain operators, restriction/prolongation, partition of unity, coarse space, transmission terms, and solver iteration.
+- **Parameter sheet required:** write the paper parameters into a concrete experiment form before running:
+  - domain and boundary conditions
+  - PDE coefficients, wavenumber/frequency, material parameters
+  - mesh size `h`, subdomain size `H`, overlap `delta`, polynomial degree, quadrature
+  - number/type of subdomains, partition geometry, coarse space
+  - solver, preconditioner, tolerance, max iterations, restart/damping
+  - reported paper table/figure target values
+- **Strict alignment:** match the paper unless a project rule or HPC rule prevents it. Do not silently replace algorithms, boundary conditions, solvers, partitioning, or parameters with convenient alternatives.
+- **HPC exception:** if exact paper parameters are estimated to exceed the active HPC permission threshold or are otherwise unsafe, stop and report the memory estimate. Propose the closest scaled experiment separately and label it as scaled, not reproduced.
+- **Comparison report:** every reproduction run should end with a compact table comparing `paper value`, `repo value`, `relative/absolute difference`, and `notes`. State whether the result is consistent, partially consistent, or inconsistent.
+- **No hidden tuning:** if extra tuning is needed to match the paper, document it as a deviation. Keep the paper-faithful run as the baseline.
 
 ## Git Commit Policy
 
@@ -83,6 +146,9 @@ After completing a phase, organize new files into their appropriate folders. Cre
 | `src/Preconditioners/` | AS/OAS/ORAS preconditioner builders |
 | `verify/` | Numerical verification and test scripts (`verify_*.m`) |
 | `debug/` | One-off debugging and investigation scripts (`debug_*.m`) |
+| `.claude/agents/` | Project sub-agent definitions such as `math-searcher` |
+| `.claude/skills/` | Project Claude skills and migrated command helpers |
+| `.agents/skills/` | Project Codex skills and source-command wrappers |
 | `.Codex/` | Codex configuration (skills, commands, hooks) |
 
 - **Test scripts always go in `verify/`** — e.g., `verify/verify_ned2_2D.m`.
