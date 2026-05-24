@@ -12,6 +12,7 @@ tests = {
     'Quasi interpolation','verify/verify_quasi_interpolation', 'fast'
     'CIP 2D',            'verify/verify_cip2d',        'fast'
     'Variable k/shifted Laplacian','verify/verify_variable_k_shifted_laplacian', 'fast'
+    'Non-divergence assembly','verify/verify_nondivergence_assembly', 'fast'
     'PML Helmholtz 2D',  'verify/verify_pml_helmholtz2d', 'fast'
     'P1-P3 Lagrange 2D', 'verify/verify_ho_2D',       'medium'
     'NE_1 Nedelec 2D',   'verify/verify_ned1_2D',     'medium'

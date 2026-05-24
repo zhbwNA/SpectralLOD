@@ -10,11 +10,11 @@ pml = struct('physicalBox', phys, 'pmlBox', pbox, ...
     'sigmaMax', 2*k, 'sigmaOrder', 2, 'quadOrder', 4);
 
 fprintf('Test 1: PML coefficients ... ');
-[a11, a22, bcoef] = pmlCoefficients2D(0.5, 0.5, k, pml);
-assert(abs(a11 - 1) < 1e-14 && abs(a22 - 1) < 1e-14 && abs(bcoef - 1) < 1e-14, ...
+[d11, d22, beta1, beta2] = pmlNondivCoefficients2D(0.5, 0.5, k, pml);
+assert(abs(d11 - 1) < 1e-14 && abs(d22 - 1) < 1e-14 && abs(beta1) < 1e-14 && abs(beta2) < 1e-14, ...
     'PML coefficients must reduce to physical coefficients inside Omega.');
-[a11p, a22p, bcoefp] = pmlCoefficients2D(-0.2, 0.5, k, pml);
-assert(abs(imag(a11p)) > 0 || abs(imag(a22p)) > 0 || abs(imag(bcoefp)) > 0, ...
+[d11p, d22p, beta1p, beta2p] = pmlNondivCoefficients2D(-0.2, 0.5, k, pml);
+assert(abs(imag(d11p)) > 0 || abs(imag(d22p)) > 0 || abs(imag(beta1p)) > 0 || abs(imag(beta2p)) > 0, ...
     'PML coefficients must be complex in the layer.');
 fprintf('PASSED\n');
 
@@ -28,7 +28,19 @@ assert(rel < 1e-12, 'Zero-PML matrix mismatch: %.3e', rel);
 assert(~isempty(freeDof) && ~isempty(bdDof), 'Dirichlet dof split must be nonempty.');
 fprintf('PASSED  (rel %.2e)\n', rel);
 
-fprintf('Test 3: PML local-solver preconditioner apply ... ');
+fprintf('Test 3: PML assembly uses non-divergence stiffness ... ');
+[Ap, ~] = assembleHelmholtzPML2D(node, elem, k, pml, 0);
+coef = struct();
+coef.d11 = @(x,y) pmlCoefField(x, y, k, pml, 'd11');
+coef.d22 = @(x,y) pmlCoefField(x, y, k, pml, 'd22');
+coef.beta1 = @(x,y) pmlCoefField(x, y, k, pml, 'beta1');
+coef.beta2 = @(x,y) pmlCoefField(x, y, k, pml, 'beta2');
+Knd = assembleNondivStiffness2D(node, elem, 1, coef, struct('quadOrder', pml.quadOrder));
+relp = norm(Ap - (Knd - k^2*M), 'fro') / max(1, norm(Ap, 'fro'));
+assert(relp < 1e-14, 'PML is not assembled through the non-divergence form: %.3e', relp);
+fprintf('PASSED  (rel %.2e)\n', relp);
+
+fprintf('Test 4: PML local-solver preconditioner apply ... ');
 parts = partitionMesh2D(node, elem, bdFlag, 2, 'overlap', 0.25);
 parts = smoothPartitionOfUnity2D(parts, pbox, [2, 1], 0.25);
 applyB = orasPMLHelmholtz2D(node, elem, k, parts, pml, 'lu', false);
@@ -41,3 +53,18 @@ assert(norm(z) > 0, 'PML preconditioner returned the zero vector for nonzero inp
 fprintf('PASSED\n');
 
 fprintf('\n========== PML Helmholtz 2D tests PASSED ==========\n');
+
+
+function val = pmlCoefField(x, y, k, pml, name)
+[d11, d22, beta1, beta2] = pmlNondivCoefficients2D(x, y, k, pml);
+switch name
+    case 'd11'
+        val = d11;
+    case 'd22'
+        val = d22;
+    case 'beta1'
+        val = beta1;
+    case 'beta2'
+        val = beta2;
+end
+end
