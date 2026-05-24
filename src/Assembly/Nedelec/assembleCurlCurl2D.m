@@ -1,11 +1,18 @@
-function A = assembleCurlCurl2D(node, elem)
-% ASSEMBLECURLCURL2D  Assemble the NE_1 curl-curl stiffness matrix in 2D.
+function A = assembleCurlCurl2D(node, elem, coef, opts)
+% ASSEMBLECURLCURL2D  Assemble the NE_1 weighted curl-curl matrix in 2D.
 %
 %   A_ij = \int_\Omega curl(φ_i) · curl(φ_j)  dx
 %
 %   NE_1 has constant curl per element → no quadrature needed.
 %   Basis φ_i is associated with the edge OPPOSITE vertex i:
 %     φ_1 ↔ edge (v2,v3),  φ_2 ↔ edge (v3,v1),  φ_3 ↔ edge (v1,v2).
+
+if nargin < 3 || isempty(coef), coef = 1; end
+if nargin < 4 || isempty(opts), opts = struct(); end
+if ~(isnumeric(coef) && isscalar(coef) && coef == 1)
+    A = assembleWeightedCurlCurl2D(node, elem, coef, opts);
+    return;
+end
 
 [~, edgeIdx, edgeSign] = edgeMesh2D(elem);
 NE = max(edgeIdx(:));

@@ -29,6 +29,19 @@ assert(all(dA > 0), 'Stiffness diagonal must be positive');
 
 fprintf('PASSED  (N=%d, NT=%d, nnz(A)=%d)\n', size(node,1), size(elem,1), nnz(A));
 
+fprintf('Test 1b: variable divergence stiffness dispatch ... ');
+A2 = assembleStiffness2D(node, elem, 1, 2);
+relScale = norm(A2 - 2*A, 'fro') / max(1, norm(A, 'fro'));
+assert(relScale < 1e-13, 'Constant diffusion coefficient mismatch: %.3e', relScale);
+coef = struct('d11', @(x,y) 1 + x + 0*y, 'd22', 2, 'd12', 0.25, 'd21', 0.25);
+AD = assembleDiffusion2D(node, elem, 1, coef);
+AV = assembleStiffness2D(node, elem, 1, coef);
+relVar = norm(AV - AD, 'fro') / max(1, norm(AD, 'fro'));
+assert(relVar < 1e-14, 'Variable divergence dispatch mismatch: %.3e', relVar);
+assert(norm(AV - AV.', 'fro') / max(1, norm(AV, 'fro')) < 1e-12, ...
+    'Symmetric tensor diffusion should assemble a symmetric matrix.');
+fprintf('PASSED  (rel %.2e)\n', relVar);
+
 
 %% ---- Test 2: Constant Patch Test ------------------------------------------
 fprintf('Test 2: Patch test (constant & linear exact reproduction) ... ');

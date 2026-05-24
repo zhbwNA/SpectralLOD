@@ -1,10 +1,11 @@
-function A = assembleStiffness2D(node, elem, degree)
-% ASSEMBLESTIFFNESS2D  Assemble the Pk stiffness matrix on a 2D triangular mesh.
+function A = assembleStiffness2D(node, elem, degree, coef)
+% ASSEMBLESTIFFNESS2D  Assemble the Pk diffusion stiffness matrix in 2D.
 %
-%   A_ij = \int_\Omega \nabla \phi_i \cdot \nabla \phi_j  dx
+%   A_ij = \int_\Omega (D \nabla \phi_j) \cdot \nabla \phi_i dx
 %
 %   A = ASSEMBLESTIFFNESS2D(node, elem)        % default: P1
-%   A = ASSEMBLESTIFFNESS2D(node, elem, degree) % P1, P2, or P3
+%   A = ASSEMBLESTIFFNESS2D(node, elem, degree)       % P1, P2, or P3
+%   A = ASSEMBLESTIFFNESS2D(node, elem, degree, coef) % scalar/tensor D
 %
 %   Input:
 %     node   - N x 2  vertex coordinates (or extended node list for k>1)
@@ -13,10 +14,16 @@ function A = assembleStiffness2D(node, elem, degree)
 %   Output:
 %     A      - N x N sparse stiffness matrix
 %
-%   P1 uses the closed-form constant-gradient formula (no quadrature needed).
-%   P2/P3 use Gaussian quadrature on the reference triangle.
+%   The unit-coefficient path preserves the fast legacy assembly. Variable
+%   scalar/tensor D is delegated to assembleDiffusion2D.
 
 if nargin < 3, degree = 1; end
+if nargin < 4 || isempty(coef), coef = 1; end
+
+if ~(isnumeric(coef) && isscalar(coef) && coef == 1)
+    A = assembleDiffusion2D(node, elem, degree, coef);
+    return;
+end
 
 if degree == 1
     % ===== P1 fast path: closed form (constant gradients) ==================
@@ -33,7 +40,6 @@ function A = assembleStiffness2D_P1(node, elem)
 % Closed-form P1 stiffness on triangles.
 
 N = size(node, 1);
-NT = size(elem, 1);
 
 x1 = node(elem(:,1), 1);   y1 = node(elem(:,1), 2);
 x2 = node(elem(:,2), 1);   y2 = node(elem(:,2), 2);
@@ -84,9 +90,8 @@ quadOrder = 2 * degree;                  % exact for integrand degree 2(p-1)
 [lambda, weight] = quadtriangle(quadOrder);
 nQuad = length(weight);
 
-% ---- Basis functions at all quadrature points -----------------------------
-[phi, Dphi_ref] = lagrange2D(degree, lambda);
-% phi:      nQuad x nLB
+% ---- Basis gradients at all quadrature points -----------------------------
+[~, Dphi_ref] = lagrange2D(degree, lambda);
 % Dphi_ref: nQuad x nLB x 3
 
 % ---- Gradient of barycentric coordinates (constant per element) -----------

@@ -84,6 +84,9 @@ end
 
 % ---- Build partition structs -----------------------------------------------
 faceVertMapping = {[2 3 4], [1 3 4], [1 2 4], [1 2 3]};
+elemIdsByNode = repmat((1:NT)', 1, 4);
+nodeElemInc = sparse(elem(:), elemIdsByNode(:), true, size(node, 1), NT);
+nodeIncidentCount = full(sum(nodeElemInc, 2));
 
 parts = struct();
 for s = 1:nTotal
@@ -102,21 +105,10 @@ for s = 1:nTotal
     parts(s).bdIdx   = find(isBd);
     parts(s).freeIdx = find(~isBd);
 
-    subNodes = parts(s).nodeIdx;
-    interior = [];  boundary = [];
-    for ni = 1:length(subNodes)
-        gNode = subNodes(ni);
-        [elemRows, ~] = find(elem == gNode);
-        elemWithNode = unique(elemRows);
-        outsideSub = setdiff(elemWithNode, eIdx);
-        if isempty(outsideSub)
-            interior = [interior; gNode]; %#ok<AGROW>
-        else
-            boundary = [boundary; gNode]; %#ok<AGROW>
-        end
-    end
-    parts(s).interiorNodeIdx = interior;
-    parts(s).boundaryNodeIdx = boundary;
+    localIncidentCount = full(sum(nodeElemInc(parts(s).nodeIdx, eIdx), 2));
+    isInterior = localIncidentCount == nodeIncidentCount(parts(s).nodeIdx);
+    parts(s).interiorNodeIdx = parts(s).nodeIdx(isInterior);
+    parts(s).boundaryNodeIdx = parts(s).nodeIdx(~isInterior);
 end
 
 % ---- Interface detection ---------------------------------------------------
@@ -158,17 +150,18 @@ if delta == 0
             locIfcSet(locIfcNodes) = true;
 
             locElem = parts(sCur).localElem;
-            ifaceFaces = zeros(0, 2);
-            for ei = 1:size(locElem, 1)
-                for f = 1:4
-                    fv = faceVertMapping{f};
-                    if locIfcSet(locElem(ei, fv(1))) && ...
-                       locIfcSet(locElem(ei, fv(2))) && ...
-                       locIfcSet(locElem(ei, fv(3)))
-                        ifaceFaces(end+1, :) = [ei, f]; %#ok<AGROW>
-                    end
-                end
-            end
+            nLocElem = size(locElem, 1);
+            locFaces = [locElem(:, faceVertMapping{1});
+                        locElem(:, faceVertMapping{2});
+                        locElem(:, faceVertMapping{3});
+                        locElem(:, faceVertMapping{4})];
+            elemFaceRows = repmat((1:nLocElem)', 4, 1);
+            localFaceIds = [ones(nLocElem, 1);
+                            2 * ones(nLocElem, 1);
+                            3 * ones(nLocElem, 1);
+                            4 * ones(nLocElem, 1)];
+            isIfaceFace = all(locIfcSet(locFaces), 2);
+            ifaceFaces = [elemFaceRows(isIfaceFace), localFaceIds(isIfaceFace)];
 
             g2lNbr = parts(sNbr).global2local;
             locToNbr = zeros(length(locIfcNodes), 1);

@@ -1,4 +1,20 @@
+Reproduction target: GGGLS24 PML decay and preasymptotic checks for the non-divergence PML operator.
+Created: 2026-05-24
+Updated: 2026-05-25
+Verification entry point: `verify/verify_gggls_pml_decay_convergence.m`
+Main utilities: `assembleGGGLSPML2D`, `assembleNondivStiffness2D`, `assembleAdvection2D`, `assembleDiffusion2D`
+
 # GGGLS PML Decay And Preasymptotic Verification
+
+## Verification Entry Point
+
+Run the reproduction checks with:
+
+```bash
+matlab -nosplash -nodesktop -batch "addpath(genpath('.')); run('verify/verify_gggls_pml_decay_convergence.m');"
+```
+
+The entry-point script is `verify/verify_gggls_pml_decay_convergence.m`.
 
 This run repeats the earlier PML decay and P1 pre-asymptotic convergence checks using `assembleGGGLSPML2D`, i.e. the expanded non-divergence GGGLS operator with `f_PML(t)=alpha*t^3/3`.
 

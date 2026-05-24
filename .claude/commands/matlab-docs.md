@@ -1,6 +1,7 @@
 ---
 name: matlab-docs
 description: Search MATLAB documentation, GitHub packages (especially iFEM), and MATLAB Central forums for relevant code and solutions.
+model: gpt-5.4
 ---
 
 # MATLAB Documentation & Package Searcher

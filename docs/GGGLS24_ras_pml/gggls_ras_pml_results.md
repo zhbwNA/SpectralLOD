@@ -1,4 +1,20 @@
+Reproduction target: GGGLS24 Section 8.3 RAS-PML/RMS-PML iteration counts for Helmholtz.
+Created: 2026-05-24
+Updated: 2026-05-25
+Verification entry point: `verify/verify_gggls_ras_pml_reproduce.m`
+Main utilities: `assembleGGGLSPML2D`, `assembleHelmholtzPML2D`, `partitionMesh2D`, `orasHelmholtz`
+
 # GGGLS RAS-PML/RMS-PML Reproduction Pilot
+
+## Verification Entry Point
+
+Run the reproduction pilot with:
+
+```bash
+matlab -nosplash -nodesktop -batch "addpath(genpath('.')); run('verify/verify_gggls_ras_pml_reproduce.m');"
+```
+
+The entry-point script is `verify/verify_gggls_ras_pml_reproduce.m`.
 
 This report uses a separate non-divergence assembly for the GGGLS form
 `a(u,v)=int k^{-2}((D grad u).grad v - (beta.grad u)v)-u v`, with `f_PML(x)=5000*x^3/3`, `delta=kappa=1/40`, and P2 elements.

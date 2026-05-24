@@ -1,10 +1,24 @@
-# ORAS Gander-Gong-Graham-Spence Reproduction Notes
+Reproduction target: Gong-Gander-Graham-Spence ORAS Helmholtz power-norm and iteration-count tables.
+Created: 2026-05-19
+Updated: 2026-05-25
+Verification entry point: `verify/verify_oras_reproduce_gggs.m`
+Main utilities: `assembleHelmholtz2D`, `orasHelmholtz`, `partitionMesh2D`, `linearPartitionOfUnity2D`, `assembleBoundaryMass2D`
 
-Date: 2026-05-19
+# ORAS Gander-Gong-Graham-Spence Reproduction Notes
 
 References:
 - Gong, Gander, Graham, Spence, "A variational interpretation of Restricted Additive Schwarz with impedance transmission condition for the Helmholtz problem", Table 1.
 - Gong, Graham, Spence, "Convergence of ORAS for discrete Helmholtz problems", Tables 5-8.
+
+## Verification Entry Point
+
+Run the reproduction study with:
+
+```bash
+matlab -nosplash -nodesktop -batch "addpath(genpath('.')); run('verify/verify_oras_reproduce_gggs.m');"
+```
+
+The entry-point script is `verify/verify_oras_reproduce_gggs.m`.
 
 ## Implementation Rules Now Used
 

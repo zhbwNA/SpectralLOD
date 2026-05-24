@@ -1,5 +1,8 @@
 # DDM-FEM-Helmholtz-Maxwell Project
 
+Created: 2026-05-21
+Updated: 2026-05-25
+
 ## MATLAB Execution
 
 - **Always run MATLAB silently**: use `-nosplash -nodesktop -batch` — no console windows.
@@ -28,12 +31,20 @@
 - Set `'Interpreter', 'latex'` on: `title()`, `xlabel()`, `ylabel()`, `legend()`, `text()`
 - Use `\setminus` for set difference: `$\partial\Omega_i \setminus \partial\Omega$`
 
+## Documentation Metadata
+
+- Every new or substantially updated Markdown document must include `Created: YYYY-MM-DD` and `Updated: YYYY-MM-DD` near the top. Keep `Created` fixed and refresh `Updated` when the document is changed.
+- Reproduction documents must also include `Verification entry point:` with the rerunnable script/function/command, and `Main utilities:` listing the principal assembly, solver, preconditioner, mesh, or verification functions used.
+- Active research notes under `tasks/<topic>/` follow the same metadata rule. When a task note is promoted to `docs/`, preserve the original creation date, refresh the update date, and keep the verification entry point current.
+
 ## iFEM Coding Style (Chen Long)
 
 This project follows the sparse matrixlization style from Long Chen's iFEM package:
 
 - **Assemble in one shot** — Build `(ii, jj, ss)` index/value vectors across all elements, then call `sparse(ii, jj, ss, N, N)` once. Never loop over elements assigning into a sparse matrix.
 - **Vectorize across elements** — Use element-wise array operations (`.`, `.*`, `./`). Element geometry (area, gradients) is computed once for all elements.
+- **Vectorize edge/face terms too** — For jump, trace, boundary, and interface integrals, collect all relevant edges/faces first and evaluate geometry, orientations, quadrature traces, and jump values as arrays. Avoid loops over edges/faces in production assemblers; small loops over fixed quadrature points, polynomial degree, or derivative order are acceptable when the edge/element dimension is vectorized.
+- **Keep loop references for refactors** — When replacing a clear edge/element loop prototype with a vectorized assembler, add a focused verification that compares the new sparse matrix against the loop reference before relying on stronger mathematical tests.
 - **Pre-allocate index arrays** — `ii = zeros(nEntries,1); jj = zeros(nEntries,1); ss = zeros(nEntries,1); idx = 0;` — fill in blocks, then truncate.
 - **Struct-based API** — Geometry in `mesh` struct (`node`, `elem`, `bdFlag`, `area`, `edge`). PDE data in `pde` struct (`coef`, `source`, `dirichlet`, `neumann`).
 - **Function naming** — `assembleXxx` for matrix assembly, `camelCase` for utilities. No underscores in function names (MATLAB convention).
@@ -85,7 +96,8 @@ Before writing any new function:
 3. **Use** existing mesh utilities (`edgeMesh2D`, `edgeMesh3D`, `faceMesh3D`, `extendMesh2D`, `extendMesh3D`, `quadtriangle`, `quadtet`).
 4. **Use** existing basis evaluators (`lagrange2D`, `lagrange3D`, `nedelec1_2D`, `nedelec1_3D`, `nedelec2_2D`, `nedelec2_3D`).
 5. **Prefer extending** an existing function over creating a new one alongside it.
-6. **Do not reimplement** quadrature, basis gradients, or mesh topology — they already exist.
+6. **If no utility exists, create one for reuse** — Do not bury reusable numerical pieces such as normal-derivative jumps, trace matrices, restrictions, or edge/face geometry inside one paper-specific assembler. Extract a small reusable subroutine and have the specific assembler call it.
+7. **Do not reimplement** quadrature, basis gradients, or mesh topology — they already exist.
 
 ## Research Subagents
 
@@ -93,11 +105,15 @@ Before writing any new function:
 - Give `math-searcher` a bounded target: method names, equations/sections to extract, desired source type (paper, arXiv, code, documentation), and implementation language if relevant.
 - `math-searcher` should prioritize primary sources, return URLs/DOIs/arXiv IDs, extract only the requested formulas or algorithm details, and state how each result maps to this MATLAB codebase.
 - Do not treat internet summaries as implementation authority. Convert any extracted formulation into this project's notation and verify locally before coding.
+- **Use `math-translator`** for paper reproduction and active research tasks after the source formulation is identified. It should write the PDE, boundary/interface conditions, variational form, integration-by-parts steps when they matter, and matrix/operator representation into the task's Markdown file under `tasks/<topic>/` or the relevant `docs/<article-or-topic>/` folder.
+- When several mathematically equivalent discretizations exist, `math-translator` must name the alternatives and state which one this repo uses for the task. For example, PML notes should explicitly say whether the implementation uses a divergence-form stretched-coordinate bilinear form or an expanded non-divergence form, then give the corresponding matrix formula.
+- The task Markdown should be the durable formulation record for ongoing research work: update it as implementation choices change instead of leaving the formulas only in chat or temporary scratch notes.
 
 ## Paper Reproduction Workflow
 
 Use this workflow whenever the user asks to **reproduce**, **replicate**, or **match** experiments from a paper.
 
+- **Document metadata required:** the first block of each reproduction Markdown file must state the reproduction target, `Created`, `Updated`, `Verification entry point`, and `Main utilities`.
 - **Goal first:** the goal is not to improve the method, tune aggressively, or make a new benchmark. The goal is to determine whether this repo can produce tables/figures consistent with the paper.
 - **Extract before coding:** use `math-searcher` when needed to find the paper, preprint, author implementation, supplementary material, or related code. Extract the exact algorithm, PDE, boundary conditions, discretization, stopping rules, reported metrics, and table/figure parameters.
 - **Translate to matrices:** use `math-translator` when needed to convert the paper formulation into this repo's matrix notation: global operator, local subdomain operators, restriction/prolongation, partition of unity, coarse space, transmission terms, and solver iteration.
@@ -112,8 +128,16 @@ Use this workflow whenever the user asks to **reproduce**, **replicate**, or **m
 - **HPC exception:** if exact paper parameters are estimated to exceed the active HPC permission threshold or are otherwise unsafe, stop and report the memory estimate. Propose the closest scaled experiment separately and label it as scaled, not reproduced.
 - **Comparison report:** every reproduction run should end with a compact table comparing `paper value`, `repo value`, `relative/absolute difference`, and `notes`. State whether the result is consistent, partially consistent, or inconsistent.
 - **No hidden tuning:** if extra tuning is needed to match the paper, document it as a deviation. Keep the paper-faithful run as the baseline.
+- **Temporary reproduction notes:** during an active literature-reproduction run, temporary Markdown notes and generated figures may live under a dedicated `verify/<paper-or-method>/` folder.
+- **Article folder naming:** completed article-reproduction folders under `docs/` must use the pattern `<AMS-style citation abbreviation>_<brief method>`, e.g. `GGGLS24_pml`, `TW05_asm_poisson`, or `Gan06_osm_poisson`.
+- **One article per reproduction doc:** do not mix reproduction experiments from different articles in one report. Split mixed reports by paper/book/article target. The first line of each reproduction Markdown file must state `Reproduction target: ...`.
+- **Interest-driven exception:** exploratory experiments driven by project interests rather than a specific paper do not need the article-abbreviation naming rule, but should still use clear folder names.
+- **Closeout cleanup:** before committing a completed reproduction, remove half-finished scratch files from `verify/` and move the finished article-level report folder to `docs/<AMS-style abbreviation>_<brief method>/`. Keep `verify/` for executable checks, temporary run artifacts, and scripts that can be rerun.
 
 ## Git Commit Policy
+
+- **Include user document edits when committing** — If the user has modified Markdown, task notes, reports, or project-rule documents related to the current phase, include those document changes in the commit and follow the updated rules without asking again.
+- **Double-check user code edits before committing** — If the user has modified source or verification code during the phase, inspect the diff and ask only when the intent is unclear, the code conflicts with the current implementation, or committing it would mix unrelated work.
 
 - **Commit when a phase is complete and verified** — After writing a component and its verification passes, commit immediately. Don't batch unrelated changes.
 - **Document genuine bugs in commit messages** — When a non-obvious bug was encountered and fixed during development, describe it in the commit body:
@@ -144,6 +168,8 @@ After completing a phase, organize new files into their appropriate folders. Cre
 | `src/Utils/` | Mesh, quadrature, transfer, and other auxiliary utilities |
 | `src/DDM/` | Domain decomposition partitioning and solver routines |
 | `src/Preconditioners/` | AS/OAS/ORAS preconditioner builders |
+| `tasks/` | Active research-task folders based on the current repo; keep task-local formulation notes, matrix translations, implementation plans, open questions, and intermediate Markdown records here until they become stable documentation |
+| `docs/` | Stable documentation, article reproduction reports, result summaries, and generated figures referenced by reports |
 | `verify/` | Numerical verification and test scripts (`verify_*.m`) |
 | `debug/` | One-off debugging and investigation scripts (`debug_*.m`) |
 | `.claude/agents/` | Project sub-agent definitions such as `math-searcher` |
@@ -153,6 +179,7 @@ After completing a phase, organize new files into their appropriate folders. Cre
 
 - **Test scripts always go in `verify/`** — e.g., `verify/verify_ned2_2D.m`.
 - **Debug/investigation scripts always go in `debug/`** — e.g., `debug/debug_cond.m`.
+- **Active research notes go in `tasks/<topic>/`** until they are finished enough to move into `docs/`; keep task-local formulas, matrix translations, parameter sheets, and unresolved implementation choices there.
 - **Create a new subfolder under `src/`** when a logical group of library files warrants it.
 - **Never leave standalone scripts at root** — they belong in `verify/`, `debug/`, or a topic folder.
 
@@ -211,167 +238,10 @@ Generates in `verify/`:
 - `fig_asm_overlap.png` — 2D ASM: elements colored by Ω_i, overlap region, interior★ vs boundary○ nodes
 - `fig_osm_nonoverlap.png` — 2D OSM: non-overlapping subdomains, interface edges in red
 
-## Verified Results Summary
-
-### 1D Results (h=1/32..1/256)
-
-| Method | nSub | δ>0? | κ | ρ | Iters |
-|--------|------|------|---|---|-------|
-| ASM | 2 | yes | 1.0 | ~0 | 3 |
-| ASM | 4 | yes | 1.2–1.3 | 0.002–0.004 | 5 |
-| ASM | 8 | yes | 2.0–2.5 | 0.030–0.051 | 9 |
-| ASM | any | **no** | 80–550 | 1.2–1.5 | **fails** |
-| OSM | 2 | — | — | 0.15 | 9 |
-| OSM | 4 | — | — | 0.46 | 18 |
-| OSM | 8 | — | — | 0.91 | 100 |
-
-### 2D Results (h=1/12..1/24)
-
-| Method | nSub | δ>0? | κ | ρ | Iters |
-|--------|------|------|---|---|-------|
-| ASM | 2 | yes | 1.4–2.0 | 0.006–0.030 | 6–7 |
-| ASM | 3 | yes | 2.6–5.2 | 0.056–0.151 | 9–13 |
-| ASM | 4 | yes | 3.8–9.1 | 0.105–0.253 | 11–17 |
-| ASM | any | **no** | 700–1600 | 1.1 | **fails** |
-| OSM | 2 | — | — | 0.94 | >100 |
-| OSM | 3 | — | — | 0.99 | >100 |
-
-### 3D Results (h=1/6..1/8)
-
-| Method | nSub | δ>0? | κ | ρ | Iters |
-|--------|------|------|---|---|-------|
-| ASM | 2 | yes | 2.0–2.5 | 0.029–0.050 | 7–8 |
-| ASM | 3 | yes | 5.3 | 0.155 | 13 |
-| ASM | any | **no** | 8000+ | 1.0+ | **fails** |
-| OSM | 2 | — | — | 0.96 | >100 |
-
-### Key Findings
-
-1. **ASM-PCG is effective across all dimensions** (3–17 iterations with proper overlap)
-2. **Overlap δ > 0 is essential** for ASM with Dirichlet inner BC — without overlap the preconditioned system becomes singular (subdomains disconnected at shared boundaries)
-3. **κ is independent of h**, depends on H/δ ratio — confirmed in 1D/2D/3D
-4. **OSM converges in 1D** (ρ≈0.15 with optimal α) but **fails in 2D/3D** (ρ→1) without a coarse space
-5. **One-level OSM is not viable in 2D/3D** — a two-level method with coarse space is required
-
-### Run DDM extension study (checkerboard, overlapping OSM, coarse space)
-
-```bash
-matlab -nosplash -nodesktop -batch "addpath(genpath('.')); run('verify/verify_ddm_extension.m');"
-```
-
-5-table study on 2D Poisson:
-- Table 1: ASM strip vs checkerboard (κ, PCG iters)
-- Table 2: OSM strip vs checkerboard (ρ, iters)
-- Table 3: Overlapping OSM δ-effect (ρ vs δ, α)
-- Table 4: Two-level ASM with coarse space
-- Table 5: Two-level OSM with coarse space
-
-**Extension Results Summary:**
-- Checkerboard partitioning works with ASM (κ slightly higher than strips for same element count)
-- Overlapping OSM: δ=0.16 gives ρ=0.04 (6 iters), vs ρ=0.94 (fails) for non-overlapping. Overlap dramatically improves OSM.
-- Two-level OSM: P1 coarse H=1/6 gives ρ=0.17 (9 iters), vs ρ=0.996 (fails) for one-level. Coarse space transforms OSM from useless to practical in 2D.
-- Two-level ASM: additive coarse correction increases κ when fine preconditioner is already strong. Multiplicative/hybrid needed for benefit.
-- P2 DDM: requires special DOF classification (vertex vs edge interior/boundary) — open problem.
-
-## ORAS for Helmholtz (Gong-Gander-Graham-Spence 2021/2022)
-
-### Mathematical Formulation
-
-Helmholtz with impedance BC: `-(Δ + k²)u = f`, `∂u/∂n - iku = g` on ∂Ω.
-
-Sesquilinear form: `a(u,v) = ∫_Ω(∇u·∇v̄ - k²uv̄)dx - ik∫_{∂Ω}uv̄ ds`
-
-ORAS preconditioner: `B_h^{-1} = Σ_j R̃_{h,j} A_{h,j}^{-1} R_{h,j}`
-
-- `R_{h,j}`: restriction (by duality)
-- `R̃_{h,j}`: weighted prolongation = `R_{h,j}(I_h(χ_j · v))` — multiply local solution by partition of unity χ_j before extending
-- `A_{h,j}`: local Helmholtz with impedance BC on ALL of ∂Ω_j
-- χ_j(node) = 1/(#subdomains containing node)
-
-GMRES is the preferred global solver (non-Hermitian A). Richardson needs strong damping.
-
-### Usage: ORAS with adjustable k, h, delta, and solver mode
-
-```matlab
-% ---- Parameters -----------------------------------------------------------
-k     = 20;                   % wavenumber
-h     = 2/(10*k);             % mesh size (h*k = 0.2 for P1 resolution)
-delta = 1/4;                  % overlap extension per side (physical distance)
-nSub  = 8;                    % number of strip subdomains
-% For checkerboard: nSub = [nx, ny], e.g. [5, 5]
-
-% ---- Mesh -----------------------------------------------------------------
-[node, elem, bd] = squaremesh([0, 16/3, 0, 1], h);  % strip domain
-% [node, elem, bd] = squaremesh([0, 1, 0, 1], h);    % checkerboard domain
-
-% ---- Manufactured solution: u = sin(pi x) sin(pi y) -----------------------
-u_ex = @(x,y) sin(pi*x) .* sin(pi*y);
-f    = @(x,y) (2*pi^2 - k^2) * u_ex(x,y);
-g    = @(x,y) 0;              % impedance BC: du/dn - iku = g
-
-% ---- Global Helmholtz assembly -------------------------------------------
-[A, b] = assembleHelmholtz2D(node, elem, bd, k, f, g);
-
-% ---- Partition ------------------------------------------------------------
-parts = partitionMesh2D(node, elem, bd, nSub, 'overlap', delta);
-
-% ---- Build ORAS preconditioner -------------------------------------------
-% solverMode: 'lu' (default, fast iterations, more memory — may exceed RAM)
-%             'direct' — A\b each iteration via UMFPACK, less memory
-applyPrecon = orasHelmholtz(node, elem, bd, k, parts, 1, 'direct');
-
-% ---- Solve with Richardson iteration -------------------------------------
-u = zeros(size(A,1), 1);
-for it = 1:200
-    r = b - A * u;
-    u = u + applyPrecon(r);
-    if norm(r)/norm(b) < 1e-6, break; end
-end
-% ---- Or solve with GMRES -------------------------------------------------
-% [u, flag, relres, iter] = gmres(A, b, [], 1e-6, 200, applyPrecon);
-```
-
-**Parameter guide:**
-| Param | Description | Typical value |
-|-------|-------------|---------------|
-| `k` | Wavenumber | 20 (h=0.01), 40 (h=0.005), etc. |
-| `h` | Mesh size | `2/(10*k)` for h·k=0.2 resolution |
-| `delta` | Overlap per side | `1/4` for strips, `H/4` for checkerboard |
-| `nSub` | Subdomain count | Scalar→strips, `[nx,ny]`→checkerboard |
-| `degree` | FE order | 1 (P1), 2 (P2 experimental) |
-| `solverMode` | Subdomain solver | `'lu'` (fast, high memory), `'direct'` (backslash, low memory) |
-| `useParfor` | Parallel subdomain setup | `false` (default), `true` (needs active `parpool`) |
-
-**Solver mode comparison:**
-| Mode | Peak memory | Per-iteration speed | When to use |
-|------|------------|---------------------|-------------|
-| `'lu'` | High (LU fill-in can be 10-100× matrix size) | Fast (forward/back substitution) | Small/medium problems, enough RAM |
-| `'direct'` | Low (stores only A_j, no factors) | Slower (UMFPACK each iteration) | Large 2D/3D problems, HPC |
-
-### Run overlapping OSM comprehensive study
-
-```bash
-matlab -nosplash -nodesktop -batch "addpath(genpath('.')); run('verify/verify_ddm_osm_overlap.m');"
-```
-
-Shows partition diagrams first, then 4 tables:
-- Table 1: Overlapping OSM — δ effect for strip partitions (nSub=2,3,4)
-- Table 2: Overlapping OSM — δ effect for checkerboard (2×2, 3×3)
-- Table 3: Overlapping OSM — α sensitivity scan (best δ=H/2)
-- Table 4: Two-level overlapping OSM — coarse + overlap combined (strip + checkerboard)
-
-Generates diagrams:
-- `fig_osm_strip_overlap.png` — strip non-overlap vs overlap comparison
-- `fig_osm_checkerboard_overlap.png` — checkerboard 2×2 and 3×3 with overlap
-
-### Show subdomain boundaries (zig-zag visualization)
-
-```bash
-matlab -nosplash -nodesktop -batch "addpath(genpath('.')); run('verify/plot_subdomain_boundaries.m');"
-```
-
-Generates `verify/fig_smooth_boundaries.png` — 3 panels contrasting zig-zag vs straight boundaries:
-- δ not aligned with mesh → zig-zag
-- δ = h → straight vertical boundaries
-- δ = 2h → straight, wider overlap
-- **Rule:** choose δ = k·h (integer multiple of mesh size) for straight subdomain boundaries on structured meshes.
+Stable DDM result summaries and ORAS/Helmholtz reproduction notes live in:
+- `docs/TW05_asm_poisson/`
+- `docs/Gan06_osm_poisson/`
+- `docs/GGGS21_oras_helmholtz/`
+- `docs/GGGLS24_pml/`
+- `docs/GGGLS24_ras_pml/`
+- `docs/interest_theory_checks/`

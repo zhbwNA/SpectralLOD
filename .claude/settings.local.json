@@ -1,12 +1,26 @@
 {
   "permissions": {
     "allow": [
+      "Bash(*)",
       "Bash(git:*)",
       "Bash(matlab:*)",
       "Bash(ls:*)",
       "Bash(mkdir:*)",
       "Bash(cd:*)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "WebSearch",
+      "Bash(\"C:\\\\Program Files\\\\MATLAB\\\\R2023a\\\\bin\\\\matlab.exe\" -nosplash -nodesktop -batch \"addpath\\(genpath\\('e:/bwzheng/DDM_Maxwell/DDM-FEM-Helmholtz-Maxwell'\\)\\); run\\('verify/verify_assemble1d.m'\\);\")",
+      "Read(//c/Program Files/MATLAB/R2023a/bin/**)",
+      "Read(//mnt/c/Program Files/MATLAB/R2023a/bin/**)",
+      "Bash(\"/c/Program Files/MATLAB/R2023a/bin/matlab\" -nosplash -nodesktop -batch \"addpath\\(genpath\\('e:/bwzheng/DDM_Maxwell/DDM-FEM-Helmholtz-Maxwell'\\)\\); run\\('verify/verify_assemble1d.m'\\);\")",
+      "Bash(\"/c/Program Files/MATLAB/R2023a/bin/matlab\" -nosplash -nodesktop -batch \"addpath\\(genpath\\('e:/bwzheng/DDM_Maxwell/DDM-FEM-Helmholtz-Maxwell'\\)\\); [node, elem] = linemesh\\(0,1,4\\); [node2, elem2] = extendMesh1D\\(node, elem, 2\\); disp\\('Original mesh:'\\); disp\\(node'\\); disp\\(elem\\); disp\\('Extended mesh:'\\); disp\\(node2'\\); disp\\(elem2\\); disp\\('h per elem:'\\); disp\\(node2\\(elem2\\(:,end\\)\\) - node2\\(elem2\\(:,1\\)\\)\\);\")",
+      "Bash(\"/c/Program Files/MATLAB/R2023a/bin/matlab\" -nosplash -nodesktop -batch \"addpath\\(genpath\\('e:/bwzheng/DDM_Maxwell/DDM-FEM-Helmholtz-Maxwell'\\)\\); [node, elem] = linemesh\\(0,1,4\\); A1 = assembleStiffness1D\\(node, elem, 1\\); A2 = assembleStiffness1D\\(node, elem, 2\\); disp\\('P1 stiffness:'\\); full\\(A1\\); disp\\('P2 stiffness:'\\); full\\(A2\\); disp\\('P2 elem 1 block:'\\); full\\(A2\\(1:3,1:3\\)\\); h = 0.25; disp\\('Expected P2 elem \\(1/h\\)*[7/3 -8/3 1/3; -8/3 16/3 -8/3; 1/3 -8/3 7/3]:'\\); expected = \\(1/h\\) * [7/3 -8/3 1/3; -8/3 16/3 -8/3; 1/3 -8/3 7/3]; disp\\(expected\\);\")",
+      "Bash(\"/c/Program Files/MATLAB/R2023a/bin/matlab\" -nosplash -nodesktop -batch \"addpath\\(genpath\\('e:/bwzheng/DDM_Maxwell/DDM-FEM-Helmholtz-Maxwell'\\)\\); [node, elem] = linemesh\\(0,1,4\\); A2 = assembleStiffness1D\\(node, elem, 2\\); disp\\('P2 stiffness \\(1:3,1:3\\):'\\); disp\\(full\\(A2\\(1:3,1:3\\)\\)\\); h=0.25; expected=\\(1/h\\)*[7/3,-8/3,1/3;-8/3,16/3,-8/3;1/3,-8/3,7/3]; disp\\('Expected:'\\); disp\\(expected\\); disp\\('Difference:'\\); disp\\(full\\(A2\\(1:3,1:3\\)\\)-expected\\);\")",
+      "Bash(\"/c/Program Files/MATLAB/R2023a/bin/matlab\" -nosplash -nodesktop -batch \"addpath\\(genpath\\('e:/bwzheng/DDM_Maxwell/DDM-FEM-Helmholtz-Maxwell'\\)\\); [x,w]=gauss1D\\(4\\); disp\\('x:'\\); disp\\(x\\); disp\\('w:'\\); disp\\(w\\); disp\\('sum\\(w\\):'\\); disp\\(sum\\(w\\)\\); [phi,Dphi]=lagrange1D\\(2,x\\); disp\\('Dphi:'\\); disp\\(Dphi\\); Kref = zeros\\(3\\); for q=1:4, Kref = Kref + w\\(q\\) * \\(Dphi\\(q,:\\)' * Dphi\\(q,:\\)\\); end; disp\\('Kref via quad:'\\); disp\\(Kref\\); disp\\('Expected Kref:'\\); disp\\([7/3 -8/3 1/3; -8/3 16/3 -8/3; 1/3 -8/3 7/3]\\);\")",
+      "Skill(math-translator)",
+      "Skill(math-translator:*)",
+      "WebFetch(domain:arxiv.org)",
+      "WebFetch(domain:www.shihua-gong.org)"
     ]
   }
 }
