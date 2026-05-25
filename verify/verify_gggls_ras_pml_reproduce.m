@@ -24,8 +24,8 @@ for k = opts.kVals
         result = runGGGLSCase(k, cfg, opts);
         results(idxResult) = result;
         fprintf('%-12s k=%-4g grid=%-5s DOF=%-7d RAS=%-5s GMRES=%-5s RMS=%-5s\n', ...
-            result.shape, result.k, result.grid, result.dof, iterString(result.rasFixed, opts.maxIter), ...
-            iterString(result.rasGMRES, opts.maxIter), iterString(result.rmsFixed, opts.maxIter));
+            result.shape, result.k, result.grid, result.dof, ggglsIterString(result.rasFixed, opts.maxIter), ...
+            ggglsIterString(result.rasGMRES, opts.maxIter), ggglsIterString(result.rmsFixed, opts.maxIter));
     end
 end
 results = results(1:idxResult);
@@ -310,10 +310,11 @@ fprintf(fid, '![Residual histories](fig_gggls_histories.png)\n\n');
 fprintf(fid, '![Iteration counts](fig_gggls_iterations.png)\n\n');
 fprintf(fid, '| shape | grid | k | 1/h | DOF | RAS fixed | RAS GMRES | RMS fixed | RAS relres | GMRES true relres | GMRES prec relres | RMS relres | status |\n');
 fprintf(fid, '|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|\n');
-for r = results
+for ir = 1:numel(results)
+    r = results(ir);
     fprintf(fid, '| %s | %s | %.0f | %d | %d | %s | %s | %s | %.3e | %.3e | %.3e | %.3e | %s |\n', ...
-        r.shape, r.grid, r.k, r.hInv, r.dof, iterString(r.rasFixed, opts.maxIter), ...
-        iterString(r.rasGMRES, opts.maxIter), iterString(r.rmsFixed, opts.maxIter), r.rasRelres, ...
+        r.shape, r.grid, r.k, r.hInv, r.dof, ggglsIterString(r.rasFixed, opts.maxIter), ...
+        ggglsIterString(r.rasGMRES, opts.maxIter), ggglsIterString(r.rmsFixed, opts.maxIter), r.rasRelres, ...
         r.gmresRelres, r.gmresPrecRelres, r.rmsRelres, r.status);
 end
 fprintf(fid, '\nPaper Section 8.3 uses `k=100:50:350`, strips `N=2,4,8`, and checkerboards `2x2,4x4,8x8`. This script defaults to the smallest paper point and skips any requested case whose memory estimate exceeds `GGGLS_MEMORY_GB`.\n\n');
@@ -325,7 +326,8 @@ fprintf(fid, '- RMS checkerboard `2x2`: 2 fixed-point counts across k=100..350.\
 fprintf(fid, '\n## Direct comparison for the requested cases\n\n');
 fprintf(fid, '| shape | grid | k | paper RAS fixed | measured RAS fixed | paper GMRES | measured GMRES | paper RMS fixed | measured RMS fixed | note |\n');
 fprintf(fid, '|---|---:|---:|---:|---:|---:|---:|---:|---:|---|\n');
-for r = results
+for ir = 1:numel(results)
+    r = results(ir);
     [pRAS, pGMRES, pRMS] = paperCase1Target(r.shape, r.grid, r.k);
     note = 'ok';
     if ~strcmp(r.status, 'ok')
@@ -335,9 +337,9 @@ for r = results
         note = 'check';
     end
     fprintf(fid, '| %s | %s | %.0f | %s | %s | %s | %s | %s | %s | %s |\n', ...
-        r.shape, r.grid, r.k, targetString(pRAS), iterString(r.rasFixed, opts.maxIter), ...
-        targetString(pGMRES), iterString(r.rasGMRES, opts.maxIter), ...
-        targetString(pRMS), iterString(r.rmsFixed, opts.maxIter), note);
+        r.shape, r.grid, r.k, targetString(pRAS), ggglsIterString(r.rasFixed, opts.maxIter), ...
+        targetString(pGMRES), ggglsIterString(r.rasGMRES, opts.maxIter), ...
+        targetString(pRMS), ggglsIterString(r.rmsFixed, opts.maxIter), note);
 end
 fprintf(fid, '\nHere `measured GMRES` is the iteration count for the explicitly preconditioned GGGLS system `B_h^{-1}A_h x=B_h^{-1}b`, matching the GMRES system described in the paper. The adjacent measured table also reports the unpreconditioned physical residual `||b-Ax||/||b||`, which can be slightly larger at the same iteration.\n');
 end
@@ -349,13 +351,19 @@ print(fig, fileName, '-dpng', '-r160');
 end
 
 
-function s = iterString(its, maxIter)
+function s = ggglsIterString(its, varargin)
+if nargin >= 2
+    maxIter = varargin{1};
+else
+    maxIter = 80;
+end
 if isnan(its)
     s = 'skip';
 elseif its > maxIter
     s = sprintf('>%d', maxIter);
 else
     s = sprintf('%d', its);
+end
 end
 
 
@@ -368,7 +376,9 @@ end
 end
 
 
-function [ras, gmres, rms] = paperCase1Target(shape, grid, k)
+function [ras, gmres, rms] = paperCase1Target(shape, varargin)
+grid = varargin{1};
+k = varargin{2};
 ras = NaN; gmres = NaN; rms = NaN;
 kVals = [100, 150, 200, 250, 300, 350];
 [tf, idx] = ismember(k, kVals);
@@ -387,7 +397,6 @@ end
 ras = rasVals(idx);
 gmres = gmresVals(idx);
 rms = rmsVals(idx);
-end
 end
 
 

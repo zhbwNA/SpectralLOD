@@ -1,5 +1,10 @@
 function [applyPrecon, Aeps, pdeShift] = shiftedLaplacianPreconditioner3D(node, elem, bdFlag, k, degree, opts)
 % SHIFTEDLAPLACIANPRECONDITIONER3D  Build Aeps^{-1} for 3D Helmholtz GMRES.
+%
+%   opts.epsilon and opts.eta are forwarded to shiftedLaplacianPDE. The
+%   returned applyPrecon applies Aeps\r by sparse LU unless
+%   opts.solverMode='direct'. Use shiftedLaplacianPreconditioner2D for the
+%   matching 2D scalar Helmholtz interface.
 
 if nargin < 5 || isempty(degree), degree = 1; end
 if nargin < 6 || isempty(opts), opts = struct(); end

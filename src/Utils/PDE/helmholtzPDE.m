@@ -1,5 +1,14 @@
 function pde = helmholtzPDE(k, varargin)
 % HELMHOLTZPDE  Create coefficient data for Helmholtz/Maxwell wave assembly.
+%
+%   pde = helmholtzPDE(k, 'source', f, 'boundaryData', g, 'eta', eta)
+%   accepts constant, numeric-array, or function-valued k. The scalar
+%   Helmholtz assemblers interpret the structure as
+%       K - int (k(x)^2+i*epsilon(x)) phi_j phi_i dx
+%         - i int_Gamma eta(x) phi_j phi_i ds.
+%   Named eta rules are 'k', 'sqrt', and 'zero'; epsilon rules are 'zero',
+%   'linear', and 'quadratic'. Numeric values and function handles are also
+%   accepted by the coefficient evaluators.
 
 pde = struct();
 pde.type = 'helmholtz';

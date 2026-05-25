@@ -1,5 +1,9 @@
 function [applyPrecon, Aeps, pdeShift] = shiftedLaplacianPreconditionerMaxwell2D(node, elem, bdFlag, k, opts)
 % SHIFTEDLAPLACIANPRECONDITIONERMAXWELL2D  Build shifted NE_1 Maxwell solver.
+%
+%   Aeps is assembled as curlcurl - (k^2+i*epsilon) mass - i eta boundaryMass
+%   using assembleMaxwell2D and the same shiftedLaplacianPDE options as the
+%   scalar Helmholtz preconditioners.
 
 if nargin < 5 || isempty(opts), opts = struct(); end
 if ~isfield(opts, 'epsilon'), opts.epsilon = 'quadratic'; end
